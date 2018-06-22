@@ -1,0 +1,42 @@
+#!/bin/bash
+usage() {
+	echo "USAGE: $0 <video file> <gif>"
+	echo "encodes a video as a gif using ffmpeg"
+	echo
+	echo "FLAGS:"
+	echo "  -w - set gif width. defaults to keep aspect ratio of source"
+	echo "  -h - set gif height. defaults to keep aspect ratio of source"
+	echo "  -f - set gif fps. defaults to 25"
+	echo
+	echo "  if neither -w nor -h are set, gif is the same resolution as source"
+}
+
+fps=25
+width="-1"
+height="-1"
+
+while getopts ":hf:w:h:" opt; do
+	case $opt in
+		h) usage; exit 0;;
+		f) fps="$OPTARG" ;;
+		w) width="$OPTARG";;
+		h) height="$OPTARG";;
+	esac
+done
+shift $((OPTIND-1))
+if [ $# -lt 2 ]; then
+		usage
+		exit 1
+fi
+
+if [ "$width" = '-1' ] && [ "$height" = '-1' ]; then
+		width="iw"
+fi
+
+palette="tmppalette$$.png"
+
+filters="fps=$fps,scale=$width:$height:flags=lanczos"
+
+ffmpeg -v warning -i "$1" -vf "$filters,palettegen" -y "$palette"
+ffmpeg -v warning -i "$1" -i $palette -lavfi "$filters [x]; [x][1:v] paletteuse" -y "$2"
+rm "$palette"
